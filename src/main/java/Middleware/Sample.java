@@ -28,7 +28,7 @@ public class Sample {
     }
 
     public static void send(String phoneNum, DDL ddl) throws Exception {
-        com.aliyun.dysmsapi20170525.Client client = Sample.createClient("LTAI5tGYJrrLZ8U8btJqDpHo", "nUrlXDCOdtn0LqcTUXkpMCcxL6H5Dy");
+        com.aliyun.dysmsapi20170525.Client client = Sample.createClient("", "");
         String string = String.valueOf(Integer.parseInt(ddl.getId().substring(10)));
         SendSmsRequest sendSmsRequest = new SendSmsRequest()
                 .setPhoneNumbers("16692120732")
