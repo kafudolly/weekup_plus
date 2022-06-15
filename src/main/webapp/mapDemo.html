@@ -1,0 +1,526 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="gbk" />
+    <title>导航</title>
+
+    <style type="text/css">
+
+        html {
+            height: 100%
+        }
+
+        body {
+            height: 100%;
+            margin: 0px;
+            padding: 0px
+        }
+
+        #container {
+            height: 90%
+        }
+
+        .button {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+        }
+    </style>
+    <script src="https://mapopen.bj.bcebos.com/github/BMapGLLib/TrackAnimation/src/TrackAnimation.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" src="https://api.map.baidu.com/api?v=3.0&ak=cQG57qr3eH7dEPIbyBrpz24Pu3WK76CG"></script>
+    <script type="text/javascript" src="https://api.map.baidu.com/api?type=webgl&v=1.0&ak=cQG57qr3eH7dEPIbyBrpz24Pu3WK76CG"></script>
+</head>
+
+<body>
+    <table>
+        <tr>
+            <td>
+                <div>
+                    <select name="" id="naviType1" class="select" style="background-position-x: 150px!important;font-size:30px;"></select>
+
+                </div>
+                <div>
+                    <select name="" id="naviType2" class="select" style="background-position-x: 150px!important;font-size:30px;"></select>
+                </div>
+            </td>
+            <td>
+                <select name="" id="searchType" class="select" style="background-position-x: 150px!important;font-size:30px;"></select>
+            </td>
+            <td>
+                <div>
+                    <select name="" id="area_from" class="select" style="background-position-x: 150px!important;font-size:30px;"></select>
+                    <select name="" id="loc_from" class="select" style="background-position-x: 150px!important;font-size:30px;
+  "></select>
+                </div>
+                <div>
+                    <select name="" id="area_to" class="select" style="background-position-x: 150px!important;font-size:30px;position: relative;
+
+  "></select>
+
+                    <select name="" id="loc_to" class="select" style="background-position-x: 150px!important;font-size:30px;
+  "></select>
+                </div>
+            </td>
+            <td>
+                <div>
+                    <input id="keyWordFrom" style="font-size:20px" />
+                </div>
+                <div>
+                    <input id="keyWordTo" style="font-size:20px"/>
+                </div>
+            </td>
+            <td>
+                <div>
+                    <button id="searchFrom" class="button">
+                        出发搜索
+                    </button>
+                </div>
+                <div>
+                    <button id="searchTo" class="button">
+                        到达搜索
+                    </button>
+                </div>
+            </td>
+            <td>
+                <div>
+                    <button id="submit" class="button">
+                        开始导航
+                    </button>
+                </div>
+            </td>
+        </tr>
+        
+    </table>
+    
+    
+    <div id="container" style="position:relative;top:50px;"> </div>
+    <script type="text/javascript">
+
+        var json;
+        var S, X;
+        $.ajax({
+            url: "http://81.70.95.181:8080/demo/navi/get",
+            type: 'GET',
+            dataType: 'json',
+            async: false,
+            success: function (data) {
+                json = eval(data.result.addresslist);
+                S = json.S;
+                X = json.X;
+                for (i = 0; i < S.length; i++) {
+                    console.log(S[i].name);
+                }
+            }
+        });
+        
+        // 创建地图实例
+        var map = new BMapGL.Map("container");
+
+
+        var point = new BMapGL.Point(116.298646, 40.164594);
+
+        // 初始化地图，设置中心点坐标和地图级别
+        map.centerAndZoom(point, 15);
+        map.enableScrollWheelZoom(true);
+        var acookie = document.cookie.split("; ");
+        var navifrom = document.getElementById("naviType1");
+        navifrom.add(new Option("按地点", 1));
+        navifrom.add(new Option("按课程", 2));
+        navifrom.add(new Option("按时间", 3));
+        var navito = document.getElementById("naviType2");
+        navito.add(new Option("按地点", 1));
+        navito.add(new Option("按课程", 2));
+        navito.add(new Option("按时间", 3));
+        var type = document.getElementById("searchType");
+        type.add(new Option("最短路径", 1));
+        type.add(new Option("最短时间", 2));
+        type.add(new Option("交通工具最短时间", 3));
+        var marker1 = new BMapGL.Marker(point);
+        var naviType1 = document.getElementById("naviType1");
+        var naviType2 = document.getElementById("naviType2");
+        var searchFrom = document.getElementById("searchFrom");
+        var searchTo = document.getElementById("searchTo");
+        var keywordFrom = document.getElementById("keyWordFrom");
+        var keywordTo = document.getElementById("keyWordTo");
+        map.addOverlay(marker1);
+        $("#naviType1").change(function () {
+
+            $('#loc_from').find('option').remove();
+
+            if (naviType1.value == 1) {
+                area_from.style.visibility = "visible";
+                searchFrom.style.visibility = "hidden";
+                keywordFrom.style.visibility = "hidden";
+            }
+            else if (naviType1.value == 2) {
+                area_from.style.visibility = "hidden";
+                searchFrom.style.visibility = "visible";
+                keywordFrom.style.visibility = "visible";
+            }
+            else {
+                area_from.style.visibility = "hidden";
+                searchFrom.style.visibility = "hidden";
+                keywordFrom.style.visibility = "hidden";
+                var keyword = '*';
+                $.ajax({
+                    url: "http://81.70.95.181:8080/demo/navi/class/search",
+                    type: 'GET',
+                    dataType: 'json',
+                    beforeSend: function (xhr) {
+                        xhr.withCredentials = true
+                    },
+                    crossDomain: true,
+                    data: {
+                        searchType: 1,
+                        keyWord: keyword,
+                    },
+                    async: false,
+                    success: function (data) {
+                        var classes = data.class;
+                        for (var i = 0; i < classes.length; i++) {
+                            if (classes[i].locationId > 150) {
+                                loc_from.add(new Option(String(classes[i].classBeginTime / 100) + ":" + classes[i].classBeginTime % 100, X[classes[i].locationId-151].id));
+                            }
+                            else {
+                                loc_from.add(new Option(String(classes[i].classBeginTime / 100) + ":" + classes[i].classBeginTime % 100, S[classes[i].locationId-1].id));
+                            }
+                        }
+                    }
+                });
+            }
+
+        });
+        $("#naviType2").change(function () {
+
+            $('#loc_to').find('option').remove();
+
+            if (naviType2.value == 1) {
+                area_to.style.visibility = "visible";
+                keywordTo.style.visibility = "hidden";
+                searchTo.style.visibility = "hidden";
+
+
+            }
+            else if (naviType2.value == 2) {
+                area_to.style.visibility = "hidden";
+                keywordTo.style.visibility = "visible";
+                searchTo.style.visibility = "visible";
+            }
+            else {
+                area_to.style.visibility = "hidden";
+                keywordTo.style.visibility = "hidden";
+                searchTo.style.visibility = "hidden";
+                var keyword = '*';
+                $.ajax({
+                    url: "http://81.70.95.181:8080/demo/navi/class/search",
+                    type: 'GET',
+                    dataType: 'json',
+                    beforeSend: function (xhr) {
+                        xhr.withCredentials = true
+                    },
+                    crossDomain: true,
+                    data: {
+                        searchType: 1,
+                        keyWord: keyword,
+                    },
+                    async: false,
+                    success: function (data) {
+                        var classes = data.class;
+                        for (var i = 0; i < classes.length; i++) {
+                            if (classes[i].locationId > 150) {
+                                loc_to.add(new Option(String(classes[i].classBeginTime / 100) + ":" + classes[i].classBeginTime % 100, X[classes[i].locationId - 151].id));
+                            }
+                            else {
+                                loc_to.add(new Option(String(classes[i].classBeginTime / 100) + ":" + classes[i].classBeginTime % 100, S[classes[i].locationId-1].id));
+                            }
+                        }
+                    }
+                });
+            }
+
+        });
+        var area_from = document.getElementById("area_from");
+        var area_to = document.getElementById("area_to");
+        area_from.add(new Option("西土城校区", "X"));
+        area_to.add(new Option("西土城校区", "X"));
+        area_from.add(new Option("沙河校区", "S"));
+        area_to.add(new Option("沙河校区", "S"));
+        area_from.value = "S";
+        area_to.value = "S";
+        var fromId = 0;
+        var toId = 0;
+        $("#area_from").change(function () {
+            
+            $('#loc_from').find('option').remove();
+            
+            if (area_from.value == "X") {
+                for (i = 0; i < X.length; i++) {
+                    loc_from.add(new Option(X[i].name, X[i].id));
+                }
+            }
+            else if (area_from.value == "S") {
+                for (i = 0; i < S.length; i++) {
+                    loc_from.add(new Option(S[i].name, S[i].id));
+                }
+            }
+        });
+        $("#area_to").change(function () {
+            $('#loc_to').find('option').remove();
+            if (area_to.value == "X") {
+                for (i = 0; i < X.length; i++) {
+                    loc_to.add(new Option(X[i].name, X[i].id));
+                }
+            }
+            else if (area_to.value == "S") {
+                for (i = 0; i < S.length; i++) {
+                    loc_to.add(new Option(S[i].name, S[i].id));
+                }
+            }
+
+        });
+        $("#loc_from").change(function () {
+            var allOverlay = map.getOverlays();
+            for (var i = 0; i < allOverlay.length; i++) {
+                if (allOverlay[i].isFrom || allOverlay[i].points){
+                    map.removeOverlay(allOverlay[i]);
+                }
+            }
+            if (area_from.value == "S") {
+                fromId = S[loc_from.value-1].id;
+                var point_from = new BMapGL.Point(S[loc_from.value-1].map_longitude, S[loc_from.value-1].map_latitude);
+            }
+            else {
+                fromId = X[loc_from.value-151].id;
+                var point_from = new BMapGL.Point(X[loc_from.value-151].map_longitude, X[loc_from.value-151].map_latitude);
+            }
+            
+            var myMarker = new BMapGL.Marker(point_from, { enableDragging: true, isFrom: "Y" });
+            myMarker.isFrom = "Y";
+            map.addOverlay(myMarker);
+            map.centerAndZoom(point_from, 18);
+            
+        
+            // 初始化地图，设置中心点坐标和地图级别
+            
+            
+        });
+        $("#loc_to").change(function () {
+            var allOverlay = map.getOverlays();
+            for (var i = 0; i < allOverlay.length; i++) {
+                if (allOverlay[i].isTo || allOverlay[i].points) {
+                    map.removeOverlay(allOverlay[i]);
+                }
+            }
+            if (area_to.value == "S") {
+                toId = S[loc_to.value-1].id;
+                var point_to = new BMapGL.Point(S[loc_to.value-1].map_longitude, S[loc_to.value-1].map_latitude);
+            }
+            else {
+                toId = X[loc_to.value - 151].id;
+                var point_to = new BMapGL.Point(X[loc_to.value - 151].map_longitude, X[loc_to.value - 151].map_latitude);
+            }
+
+            var myMarker = new BMapGL.Marker(point_to, { enableDragging: true, isTo: "Y" });
+            myMarker.isTo = "Y";
+            map.addOverlay(myMarker);
+            map.centerAndZoom(point_to, 18);
+
+        });
+        var pl;
+        $(function () {
+            $('#searchFrom').on('click', function () {
+                if (document.getElementById('keyWordFrom').value.length ==0) {
+                    var keyword = '*';
+                }
+                else {
+                    var keyword = document.getElementById('keyWordFrom').value;
+                }
+                $.ajax({
+                    url: "http://81.70.95.181:8080/demo/navi/class/search",
+                    type: 'GET',
+                    dataType: 'json',
+                    beforeSend: function (xhr) {
+                        xhr.withCredentials = true
+                    },
+                    crossDomain: true,
+                    data: {
+                        searchType: 1,
+                        keyWord: keyword,
+                    },
+                    async: false,
+                    success: function (data) {
+                        var classes = data.class;
+                        for (var i = 0; i < classes.length; i++) {
+                            if (classes[i].locationId > 150) {
+                                loc_from.add(new Option(classes[i].className, X[classes[i].locationId-151].id));
+                            }
+                            else {
+                                loc_from.add(new Option(classes[i].className, S[classes[i].locationId-1].id));
+                            }
+                        }
+                    }
+                });
+
+            })
+        });
+        $(function () {
+            $('#searchTo').on('click', function () {
+                if (document.getElementById('keyWordTo').value.length == 0) {
+                    var keyword = '*';
+                }
+                else {
+                    var keyword = document.getElementById('keyWordTo').value;
+                }
+                $.ajax({
+                    url: "http://81.70.95.181:8080/demo/navi/class/search",
+                    type: 'GET',
+                    dataType: 'json',
+                    beforeSend: function (xhr) {
+                        xhr.withCredentials = true
+                    },
+                    crossDomain: true,
+                    data: {
+                        searchType: 1,
+                        keyWord: keyword,
+                    },
+                    async: false,
+                    success: function (data) {
+                        var classes = data.class;
+                        for (var i = 0; i < classes.length; i++) {
+                            if (classes[i].locationId > 150) {
+                                loc_to.add(new Option(classes[i].className, X[classes[i].locationId-151].id));
+                            }
+                            else {
+                                loc_to.add(new Option(classes[i].className, S[classes[i].locationId-1].id));
+                            }
+                        }
+                    }
+                });
+
+            })
+        });
+        $(function () {
+            $('#submit').on('click', function () {
+
+                $.ajax({
+                    url: "http://81.70.95.181:8080/demo/navi",
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        startPoint: fromId,
+                        endPoint: toId,
+                        naviType: type.value
+                    },
+                    async: false,
+                    success: function (data) {
+                        array = eval(data).road;
+                        var time = eval(data).time;
+                        if (eval(data).trans) {
+                            var trans = eval(data).trans;
+                            var transStr;
+                            if (trans == "1") {
+                                transStr = "校车";
+                            }
+                            else if (trans == "2") {
+                                transStr = "公交车";
+                            }
+                            outC = "跨校区！交通方式：" + transStr;
+                            outC += "||";
+                            outC += "时间:" + time + "分钟||";
+                            outC += "路线";
+                            for (var i = 0; i < array.length-1; i++) {
+                                if (array[i] > 150) {
+                                    outC += (X[array[i] - 151].name + "->");
+                                }
+                                else {
+                                    outC += (S[array[i] - 1].name + "->");
+                                }
+                            }
+                            if (array[i] > 150) {
+                                outC += (X[array[i] - 151].name);
+                            }
+                            else {
+                                outC += (S[array[i] - 1].name);
+                            }
+                            alert(outC);
+                        }
+                        else {
+                            var outC;
+                            if (loc_from.value > 150) {
+                                outC = "西土城";
+                            }
+                            else {
+                                outC = "沙河";
+                            }
+                            outC += "校区内部！";
+                            outC += "||";
+                            outC += "时间:" + time + "分钟||";
+                            outC += "路线";
+                            for (var i = 0; i < array.length - 1; i++) {
+                                if (array[i] > 150) {
+                                    outC += (X[array[i] - 151].name + "->");
+                                }
+                                else {
+                                    outC += (S[array[i] - 1].name + "->");
+                                }
+                            }
+                            if (array[i] > 150) {
+                                outC += (X[array[i] - 151].name);
+                            }
+                            else {
+                                outC += (S[array[i] - 1].name);
+                            }
+                            alert(outC);
+                        }
+                        var fromlng, fromlat,tolng,tolat;
+                        var path = [];
+                        
+                        for (i = 0; i < array.length; i++) {
+                            if (array[i] > 150) {
+                                path[i] = { 'lng': X[array[i] - 151].map_longitude, 'lat': X[array[i] - 151].map_latitude };
+                            }
+                            else {
+                                path[i] = { 'lng': S[array[i] - 1].map_longitude, 'lat': S[array[i] - 1].map_latitude };
+                            }
+      
+                        }
+                      
+                        var point_ani = [];
+
+                        for (var i = 0; i < path.length; i++) {
+                            point_ani.push(new BMapGL.Point(path[i].lng, path[i].lat));
+                        }
+                        pl = new BMapGL.Polyline(point_ani);
+
+                        setTimeout('start()', 3000);
+                        
+                    }
+                });
+            })
+        })
+        function start() {
+            trackAni = new BMapGLLib.TrackAnimation(map, pl, {
+                overallView: true,
+                tilt: 30,
+                duration: 20000,
+                delay: 300
+            });
+            //trackAni.setZoom(18);
+            trackAni.start();
+        }
+        
+
+        area_from.value = "S";
+        area_to.value = "S";
+    </script>
+
+</body>
+
+</html>
